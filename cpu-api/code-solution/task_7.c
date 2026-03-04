@@ -16,7 +16,7 @@
     } else if (rc == 0) {
         close(STDOUT_FILENO);
         printf("child\n");
-        // works bc only fd one is closed 
+        // works bc only fd one is closed
         fprintf(stderr, "this works\n");
     } else {
     // parent goes down thipath (main)

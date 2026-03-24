@@ -12,15 +12,13 @@ int main() {
     printf("Hello World\n");
     // ensure scontext switch on same processor: sched_setaffinity()
     int cpuNumber = 0;
-    int buf;
     cpu_set_t set;
     int pipe1 [2];
     int pipe2 [2];
-    struct timeval tv;
-    long timeDiff = 0;
-    int timProcess1 = 0;
-    int timProcess2 = 0;
-    int numOfIterations = 99;
+    struct timeval tvParent;
+    struct timeval tvChild;
+    double timeDiff = 0;
+    int numOfIterations = 10000;
 
     CPU_ZERO(&set); // clears set, so that it contains no cpus
     CPU_SET(cpuNumber, &set);
@@ -53,12 +51,10 @@ int main() {
         close(pipe2[1]); // close pipe2 write end
         
         for(int i = 0; i < numOfIterations; i++) {
-            gettimeofday(&tv, NULL);
-            timProcess2 = tv.tv_usec;
             // Process 1: write pipe 1, wait read pipe2
-
-            write(pipe1[1], "s", strlen("s"));
-            read(pipe2[0], &buf ,strlen("s"));
+            gettimeofday(&tvChild, NULL);
+            write(pipe1[1], &tvChild, sizeof(tvChild));
+            read(pipe2[0], &tvParent ,sizeof(tvParent));
         }
 
         exit(0);
@@ -68,15 +64,16 @@ int main() {
         close(pipe2[0]); // close pipe2 read end
 
         for(int i = 0; i < numOfIterations; i++) {
-            gettimeofday(&tv, NULL);
-            timProcess1 = tv.tv_usec;
-            timeDiff += timProcess1 - timProcess2;
-            read(pipe1[0], &buf, strlen("s"));
-            write(pipe2[1], "s", strlen("s"));
+            read(pipe1[0], &tvChild, sizeof(tvChild));
+            gettimeofday(&tvParent, NULL);
+            write(pipe2[1], &tvParent, sizeof(tvParent));
+            double parentTime = (tvParent.tv_sec * 1000000) + tvParent.tv_usec;
+            double childTime = (tvChild.tv_sec * 1000000) + tvChild.tv_usec;
+            timeDiff += parentTime - childTime;
         }
         wait(NULL);
         float averageContextSwitchCost = timeDiff/numOfIterations;    
-        printf("average cost of a systemcall: %f\n", averageContextSwitchCost);    
+        printf("average cost of a context switch: %f\n", averageContextSwitchCost);    
 
         exit(0);
 

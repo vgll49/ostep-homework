@@ -26,13 +26,9 @@ Two jobs: length 10, tickets 1 vs 100 (-l 10:1,10:100). What happens?
 Command:
     ./lottery.py -l 10:1,10:100 -c
 
-Result:
-- Job 0 runs before Job 1 finishes?:
-- How often:
-- Who finishes first:
-
 Explanation:
-- 
+- j0 can run before j1 completes, but rarely
+- lottery scheduling with imbalanced tickets is really unfair 
 
 ---
 
@@ -44,12 +40,12 @@ Command:
     ./lottery.py -l 100:100,100:100 -s X -c
 
 Runs:
-- Seed __ → difference:
-- Seed __ → difference:
-- Seed __ → difference:
+- Seed0 j0:192,j1:200→ difference:
+- Seed1 j0:200,j1:196 → difference:
+- Seed2 j0:200j1:190 → difference:
 
 Observation:
-- 
+- Not really unfair, the more runs the fairer the scheduler will be with an balanced number of tickets
 
 ---
 
@@ -60,11 +56,9 @@ How does fairness change with larger quantum?
 Command:
     ./lottery.py -l 100:100,100:100 -q __ -c
 
-Result:
-- 
-
 Observation:
-- 
+- the bigger the q the more weight has a single run, the more unfair it can be in general
+- the fewer lottery decicions, the more "luck" is a factor
 
 ---
 
@@ -72,18 +66,8 @@ Observation:
 **Question:**  
 Recreate graph from chapter. What else to explore?
 
-Graph idea:
-- X-axis:
-- Y-axis:
-
-Experiments:
-- 
-
-Stride scheduler (comparison):
-- Expected behavior:
-- 
+Answer:
+- lottery will get fairer, the longer the jobs are
+- stride scheduler would always be fair
 
 ---
-
-## Notes
-- 

@@ -1,21 +1,3 @@
-//  Inputs to the program should be: the number of pages to touch and the number of trials.
-// What is the size of the pages? the number?
-
-
-/*
-
-bash script starts this loop in another loop, each iter is nubmber of pages accessed + time
-
-if pages have to get accessed multiple times, increase index per individual page access
-to use different VPNs and not load an adress into the tlb. 
-
-int jump = PAGESIZE / sizeof(int); // calc size of jump based on page size
-for (i = 0; i < NUMPAGES * jump; i += jump) // jump to new page every iteration
-a[i] += 1; // update int in new page
-
-*/
-
-
 #include <stdio.h>
 #include <unistd.h> // getpagesize
 #include <errno.h> // errno
@@ -24,6 +6,7 @@ a[i] += 1; // update int in new page
 #include <string.h> // strlen
 #include <sys/time.h> // gettimeofday
 
+// TODO: Bash script part
 
 static const double MICROSEC_PER_SEC = 1000000.0;
 
@@ -98,9 +81,6 @@ int main(int argc, char **argv) {
     free(a);
 }
 
-// getconf PAGE_SIZE = 4096,
-// manpage: getpagesize
-
 int strtoi(const char *arg, int *out) {
     char *p;
     errno = 0;
@@ -116,13 +96,3 @@ int strtoi(const char *arg, int *out) {
     *out = (int)val;
     return 0;
 }
-
-/*
- 1. For timing, you’ll need to use a timer (e.g., gettimeofday()).
- How precise is such a timer? How long does an operation have
- to take in order for you to time it precisely? (this will help determine how many times, in a loop, you’ll have to repeat a page access
-in order to time it successfully) 
-
-Microseconds
-
-*/

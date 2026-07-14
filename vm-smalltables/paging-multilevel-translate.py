@@ -194,11 +194,18 @@ class OS:
         print('')
 
     def memoryDump(self):
+        print("\nPhysical Memory Dump")
+        print("=" * 80)
+        print(f"{'PAGE':>6}  {'DATA':<70}")
+        print("-" * 80)
+
         for i in range(0, int(self.physMem / self.pageSize)):
-            print('page %3d:' %  i, end='')
-            for j in range(0, self.pageSize):
-                print('%02x' % self.memory[(i * self.pageSize) + j], end='')
-            print('')
+            data = " ".join(
+                "%02x" % self.memory[(i * self.pageSize) + j]
+                for j in range(self.pageSize)
+            )
+
+            print(f"{i:6d}  {data}")
 
     def getPDBR(self, pid):
         return self.pdbr[pid]

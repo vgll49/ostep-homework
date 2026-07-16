@@ -48,6 +48,41 @@ PTI=31 -> ce -> 1100 1110 -> 1 [VALID] | [PFN] 100 1110 -> Phyiscal Adress 78
 PTE|offset = 1001 1101 0101 -> PA: 0x9d5 -> Value: 0x1c
 
 
+SEED 1: 
+
+
+Virtual Address 6c74: Translates To What Physical Address (And Fetches what Value)? Or Fault?
+
+VA: 11011 00011 10100 [VPN:10 | offset: 5]
+
+Offset = 20
+
+PDINdex= 27 -> 0xa0 -> 1 [VALID] | [PFN] 010 0000 -> 32 
+PTIndex= 3 -> 0xe1 -> 1 [VALID] | [PFN] 110 0001 -> PA 96
+
+PTE|offset = 1100 0011 0100 -> 0xc34 -> Value: 0x06
+
+
+Virtual Address 6b22: Translates To What Physical Address (And Fetches what Value)? Or Fault?
+
+11010 11001 00010 [VPN:10 | offset:5]
+
+Offset = 4
+PDI=26 -> d2 -> 1 | PFN: 101 0010  -> 82
+PTI=25 -> c7 -> 1 | PFN: 100 0111 -> 71 
+
+PTE|offset= 1000 1110 0010 -> 0x8e2 -> Value: 0x1a
+
+Virtual Address 03df: Translates To What Physical Address (And Fetches what Value)? Or Fault?
+
+00000 11110 11111
+
+PDI=0 -> da -> 1101 1010 -> 1 VALID | 101 1010 -> 90
+PTI=30 -> 85 -> 1000 0101 -> 1 VALID | 000 0101 -> 5
+offset=31
+
+PTE|offset = 0000 1011 1111 -> 0x0bf -> Value: 0x0f
+
 3. Given your understanding of how cache memory works, how do
 you think memory references to the page table will behave in the
 cache? Will they lead to lots of cache hits (and thus fast accesses?)

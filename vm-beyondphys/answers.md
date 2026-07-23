@@ -61,9 +61,44 @@ are swapped in and out during the second, third, and subsequent
 loops? (do the numbers make sense?)
 
 
+MemTotal : around 32GB
+
+SwapTotal: around 8 GB
+
+When using 16 GB:
+    SI: 0
+    SO: 0
+
+    Still nothing gets swapped in and out. 
+
+When using 24 GB:
+
+    SI: 0
+    SO: 0
+
+
+When using 30 GB:
+    Now it starts swapping in and out sometimes, ranging from a few KB to 50.000 KB.
+   
+
+When using 32 GB:
+    A lot gets swapped, and the si/so gets very high after each loop for a second. This may be beacause mem has to access pages that have been swapped out in previous iterations.
+
+   
 
 4. Do the same experiments as above, but now watch the other statistics (such as CPU utilization, and block I/O statistics). How do they
 change when mem is running?
+
+16 GB:
+    CPU: More time of user code, less 
+    block I/O: Some I/O operation blocks, but also on 0 a lot.
+
+32 GB:
+
+    CPU: Lot of . CPU idle time is around the same. CPU wa time startet raising to single digit value in here, because of the heavy i/o loads..
+    block I/O: Bigger I/O block timers. They increaso with swaps, and are pretty similair. SI leads to BI timer, SO leads to BO timer.
+
+
 
 
 5. Now let’s examine performance. Pick an input for mem that comfortably fits in memory (say 4000 if the amount of memory on the

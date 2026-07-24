@@ -1,135 +1,179 @@
-Questions
-1. First, open two separate terminal connections to the same machine,
-so that you can easily run something in one window and the other.
-Now, in one window, run vmstat 1, which shows statistics about
-machine usage every second. Read the man page, the associated
-README, and any other information you need so that you can understand its output. Leave this window running vmstat for the
-rest of the exercises below.
-Now, we will run the program mem.c but with very little memory
-usage. This can be accomplished by typing ./mem 1 (which uses
-only 1 MB of memory). How do the CPU usage statistics change
-when running mem? Do the numbers in the user time column
-make sense? How does this change when running more than one
-instance of mem at once?
+# Questions
 
-When running m:
-More Context Switches because of the scheduling between the new procs. 
+## 1. vmstat and CPU usage
 
+First, open two separate terminal connections to the same machine, run `vmstat 1`, and observe the CPU usage statistics while running `mem`.
 
-User Time Column:
+### When running mem
 
-Yes, some of the mem.c code is running and a few parts are user code, so the time is more. B
+- More context switches because of the scheduling between the new processes.
 
-us: Time spent running non-kernel code.
+### User Time Column
 
-When running multiple instances: 
+Yes, some of the `mem.c` code is running and a few parts are user code, so the time is more.
 
-Same, way more context switches, less free memory, bigger buffers and more caching. si/so is still 0. User times increase further, since more user code is running. More procs running. 
+`us`: Time spent running non-kernel code.
 
+### When running multiple instances
 
+- Same, way more context switches.
+- Less free memory.
+- Bigger buffers and more caching.
+- `si/so` is still 0.
+- User times increase further, since more user code is running.
+- More processes running.
 
+---
 
-2. Let’s now start looking at some of the memory statistics while running mem. We’ll focus on two columns: swpd (the amount of virtual memory used) and free (the amount of idle memory). Run
-./mem 1024 (which allocates 1024 MB) and watch how these values change. Then kill the running program (by typing control-c)
-and watch again how the values change. What do you notice about
-the values? In particular, how does the free column change when
-the program exits? Does the amount of free memory increase by the
-expected amount when mem exits?
+## 2. Memory statistics while running mem
 
-VM:
-Stays 0, since no swap memory is is needed. 
+Observe `swpd` and `free` while running `./mem 1024`.
 
-Free:
-It goes from 30305000 (round about) back to around 31,350,000
+### VM
+
+- Stays 0, since no swap memory is needed.
+
+### Free
+
+- It goes from around `30305000` back to around `31350000`.
 
 So it loses the 1 GB of RAM, as expected.
 
+---
 
+## 3. Swap activity
 
-3. We’ll next look at the swap columns (si and so), which indicate
-how much swapping is taking place to and from the disk. Of course,
-to activate these, you’ll need to run mem with large amounts of
-memory. First, examine how much free memory is on your Linux
-system (for example, by typing cat /proc/meminfo; type man
-proc for details on the /proc file system and the types of information you can find there). One of the first entries in /proc/meminfo
-is the total amount of memory in your system. Let’s assume it’s
-something like 8 GB of memory; if so, start by running mem 4000
-(about 4 GB) and watching the swap in/out columns. Do they ever
-give non-zero values? Then, try with 5000, 6000, etc. What happens to these values as the program enters the second loop (and
-beyond), as compared to the first loop? How much data (total)
-are swapped in and out during the second, third, and subsequent
-loops? (do the numbers make sense?)
+Observe `si` and `so` while running `mem` with larger memory values.
 
+### System Memory
 
-MemTotal : around 32GB
+```
+MemTotal: around 32GB
 
 SwapTotal: around 8 GB
+```
 
-When using 16 GB:
-    SI: 0
-    SO: 0
+### When using 16 GB
 
-    Still nothing gets swapped in and out. 
+```
+SI: 0
+SO: 0
+```
 
-When using 24 GB:
+Still nothing gets swapped in and out.
 
-    SI: 0
-    SO: 0
+### When using 24 GB
+
+```
+SI: 0
+SO: 0
+```
+
+### When using 30 GB
+
+- It starts swapping in and out sometimes.
+- Values range from a few KB to 50,000 KB.
+
+### When using 32 GB
+
+- A lot gets swapped.
+- `si/so` gets very high after each loop for a second.
+- This may be because `mem` has to access pages that have been swapped out in previous iterations.
+
+---
+
+## 4. CPU utilization and block I/O
+
+Observe CPU and block I/O statistics while running `mem`.
+
+### 16 GB
+
+**CPU:**
+
+- More time of user code, less.
+
+**Block I/O:**
+
+- Some I/O operation blocks, but also on 0 a lot.
+
+### 32 GB
+
+**CPU:**
+
+- CPU idle time is around the same.
+- CPU `wa` time starts raising to single digit value because of the heavy I/O loads.
+
+**Block I/O:**
+
+- Bigger I/O block timers.
+- They increase with swaps and are pretty similar.
+- `SI` leads to `BI` timer.
+- `SO` leads to `BO` timer.
+
+---
+
+## 5. Performance
+
+Compare performance when memory fits vs. when swapping happens.
+
+### 16 GB
+
+**Time:**
+
+- The first loop takes 12000 ms.
+- The others roughly 2000 ms.
+
+**Bandwidth:**
+
+- Averages around 8000 MB/s.
+
+### 30 GB
+
+(Starts crashing on multiple loops if I use more.)
+
+**Time:**
+
+- First loop: 26000 ms.
+- Subsequent loops average around 5000 ms.
+
+**Bandwidth:**
+
+- Between 5000 and 7000 MB/s.
+
+If I would use more memory this trend would keep on.
+
+Increasing memory pressure causes more swapping, which reduces effective bandwidth and increases loop execution time.
+
+Under heavy enough memory pressure, performance can degrade dramatically due to thrashing.
+
+---
+
+## 6. Swap space limitations
+
+Observe what happens when running `mem` beyond available swap space.
+
+- 8 GB of swap memory.
+- I can't correctly test it, because WSL will crash.
+- I guess it will fail around 38 GB because of other things in memory, like:
+  - kernel memory
+  - page tables
+  - WSL overhead
+  - etc.
+
+---
+
+## 7. Different swap devices
+
+Compare swapping performance between HDD, SSD, and RAID.
+
+Swap speed will be much faster when switching from a hard drive to a flash-based SSD.
+
+Improvement depends on the read/write speed of the device.
 
 
-When using 30 GB:
-    Now it starts swapping in and out sometimes, ranging from a few KB to 50.000 KB.
-   
-
-When using 32 GB:
-    A lot gets swapped, and the si/so gets very high after each loop for a second. This may be beacause mem has to access pages that have been swapped out in previous iterations.
-
-   
-
-4. Do the same experiments as above, but now watch the other statistics (such as CPU utilization, and block I/O statistics). How do they
-change when mem is running?
-
-16 GB:
-    CPU: More time of user code, less 
-    block I/O: Some I/O operation blocks, but also on 0 a lot.
-
-32 GB:
-
-    CPU: Lot of . CPU idle time is around the same. CPU wa time startet raising to single digit value in here, because of the heavy i/o loads..
-    block I/O: Bigger I/O block timers. They increaso with swaps, and are pretty similair. SI leads to BI timer, SO leads to BO timer.
 
 
-
-
-5. Now let’s examine performance. Pick an input for mem that comfortably fits in memory (say 4000 if the amount of memory on the
-system is 8 GB). How long does loop 0 take (and subsequent loops
-1, 2, etc.)? Now pick a size comfortably beyond the size of memory
-(say 12000 again assuming 8 GB of memory). How long do the
-loops take here? How do the bandwidth numbers compare? How
-different is performance when constantly swapping versus fitting
-everything comfortably in memory? Can you make a graph, with
-the size of memory used by mem on the x-axis, and the bandwidth of
-accessing said memory on the y-axis? Finally, how does the performance of the first loop compare to that of subsequent loops, for both
-the case where everything fits in memory and where it doesn’t?
-
-
-6. Swap space isn’t infinite. You can use the tool swapon with the -s
-flag to see how much swap space is available. What happens if you
-try to run mem with increasingly large values, beyond what seems
-to be available in swap? At what point does the memory allocation
-fail?
-
-
-7. Finally, if you’re advanced, you can configure your system to use
-different swap devices using swapon and swapoff. Read the man
-pages for details. If you have access to different hardware, see how
-the performance of swapping changes when swapping to a classic
-hard drive, a flash-based SSD, and even a RAID array. How much
-can swapping performance be improved via newer devices? How
-close can you get to in-memory performance?
-
-
-Man Page:
+# Man Page (vsmtat):
 
    Procs
        r: The number of runnable processes (running or waiting for run time).

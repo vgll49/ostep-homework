@@ -87,11 +87,64 @@ Access: 0  HIT [6,7,0]
 
 Hits:3 Misses:7
 
+1. -s 2 -n 10
+
+FIFO:
+Access: 9  MISS [9]
+Access: 9  HIT [9]
+Access: 0  MISS [9,0]
+Access: 0  HIT [9,0]
+Access: 8  MISS [9,0,8] 
+Access: 7  MISS [0,8,7] rep 9
+Access: 6  MISS [8,7,6] rep 0
+Access: 3  MISS [7,6,3] rep 8
+Access: 6  HIT [7,6,3]
+Access: 6  HIT [7,6,3]
+
+Hits:4 Misses:6
+
+LRU:
+Access: 9  MISS [9]
+Access: 9  HIT [9]
+Access: 0  MISS [9,0]
+Access: 0  HIT [9,0]
+Access: 8  MISS [9,0,8]
+Access: 7  MISS [0,8,7] rep 9
+Access: 6  MISS [8,7,6] rep 0
+Access: 3  MISS [7,6,3] rep 8
+Access: 6  HIT [7,3,6]
+Access: 6  HIT [7,3,6]
+
+Hits:4 Misses:6
+
+OPT:
+Access: 9  MISS [9]
+Access: 9  HIT [9]
+Access: 0  MISS [9,0]
+Access: 0  HIT [9,0]
+Access: 8  MISS [9,0,8]
+Access: 7  MISS [9,0,7] rep 8
+Access: 6  MISS [9,0,6] rep 7
+Access: 3  MISS [9,6,3] rep 0
+Access: 6  HIT [9,6,3]
+Access: 6  HIT [9,6,3]
+
+Hits:4 Misses:6
+
 2. For a cache of size 5, generate worst-case address reference streams
 for each of the following policies: FIFO, LRU, and MRU (worst-case
 reference streams cause the most misses possible. For the worst case
 reference streams, how much bigger of a cache is needed to improve
 performance dramatically and approach OPT?
+
+
+FIFO: 1 2 3 4 5 6 1 2 3 4 5 6 etc.
+
+LRU: 1 2 3 4 5 6 1 2 3 4 5 6 etc.
+
+MRU: 1 2 3 4 5 6 5 6 5 6 5 6 etc.
+
+If you would add only a single element more to the cache, performance would improve drastically. 
 
 3. Generate a random trace (i.e., use python and write a script that
 outputs random addresses, which you can then feed into the simulator). How would you expect the different policies to perform on

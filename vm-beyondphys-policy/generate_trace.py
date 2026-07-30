@@ -6,13 +6,18 @@ def generate_trace():
         print(f"{random.randrange(0,9)},", end='')
         
 def generate_trace_locality():
-    for i in range(0,9):
+    for i in range(0,50):
         num = random.randrange(0,99)
         
         if num < 40:
             print(f"{0},", end='')
+            continue
+        if num < 80:
+            print(f"{1},", end='')
+            continue
+            
         else: 
-            print(f"{random.randrange(1,9)},", end='')
+            print(f"{random.randrange(2,9)},", end='')
      
 arg = None
 

@@ -160,14 +160,21 @@ FIFO: Hits:0
 LRU: Hits:0
 OPT:  Hits:2
 
-80-20 Workload:
-
-python generate_trace.py -l
 
 4. Now generate a trace with some locality. How can you generate
 such a trace? How does LRU perform on it? How much better than
 RAND is LRU? How does CLOCK do? How about CLOCK with
 different numbers of clock bits?
+
+80-20 Workload:
+
+python generate_trace.py -l
+
+0,1,0,1,8,0,1,1,0,0,1,1,0,1,7,1,1,0,5,0,1,6,1,1,0,0,1,0,1,0,2,1,1,1,4,1,0,1,0,0,0,0,1,1,0,1,1,1,1,0
+
+The difference of LRU/RAND performance depends a lot on how long the trace is. 
+
+CLOCK: The more clock bits, the more accurate is the through the clock bits dislplayed history, so the acc increses in this case. 
 
 5. Use a program like valgrind to instrument a real application and
 generate a virtual page reference stream. For example, running

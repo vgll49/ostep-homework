@@ -150,6 +150,20 @@ If you would add only a single element more to the cache, performance would impr
 outputs random addresses, which you can then feed into the simulator). How would you expect the different policies to perform on
 such a trace?
 
+TRACE OUTPUT: 
+
+python generate_trace.py 
+
+3,2,8,7,6,0,3,5,4
+
+FIFO: Hits:0
+LRU: Hits:0
+OPT:  Hits:2
+
+80-20 Workload:
+
+python generate_trace.py -l
+
 4. Now generate a trace with some locality. How can you generate
 such a trace? How does LRU perform on it? How much better than
 RAND is LRU? How does CLOCK do? How about CLOCK with

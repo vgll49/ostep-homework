@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
     pthread_t p;
     Pthread_create(&p, NULL, worker, NULL);
     while (done == 0)
-	;
+	; // spin (buggy, inefficient)
     printf("this should print last\n");
     return 0;
 }

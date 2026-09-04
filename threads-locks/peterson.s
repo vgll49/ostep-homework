@@ -51,3 +51,4 @@ mov $0, 0(%fx,%bx,4)    # flag[self] = 0
 mov %cx, turn           # turn       = 1 - self
 halt
 
+

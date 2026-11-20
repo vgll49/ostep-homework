@@ -1,0 +1,11 @@
+lock_type,threads,median_time_us
+global,1,202.09
+hand_over_hand,1,718.72
+global,2,644.79
+hand_over_hand,2,3142.84
+global,4,1177.95
+hand_over_hand,4,16836.78
+global,8,2828.51
+hand_over_hand,8,30995.39
+global,12,4882.98
+hand_over_hand,12,46297.63

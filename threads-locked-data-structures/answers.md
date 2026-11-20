@@ -23,19 +23,18 @@ A: In a synchronied counter more threads dont mean its faster, its actually slow
 threshold. Do the numbers match what you see in the chapter?
 
 
-
 4. Build a version of a linked list that uses hand-over-hand locking
 [MS04], as cited in the chapter. You should read the paper first
 to understand how it works, and then implement it. Measure its
 performance. When does a hand-over-hand list work better than a
 standard list as shown in the chapter?
 
+Hand-over-hand locking can theoretically outperform the global lock under high contention, especially when multiple threads operate on different parts of a large data structure. The exercise shows that theres a lot of overhead acquiring and releasing individual node locks that can outweigh the benefits of increased concurrency. In my benchmark, global locking consistently outperformed hand-over-hand locking, even as the number of threads increased.
 
 5. Pick your favorite data structure, such as a B-tree or other slightly
 more interesting structure. Implement it, and start with a simple
 locking strategy such as a single lock. Measure its performance as
 the number of concurrent threads increases.
-
 
 6. Finally, think of a more interesting locking strategy for this favorite
 data structure of yours. Implement it, and measure its performance.

@@ -5,8 +5,11 @@
 
 #define NUMCPUS 12    // lscpu
 #define CACHE_LINE 64
+#define RUNS 20
+#define WARMUP_RUNS 3
+#define MAX_THREADS 12
 
-// Jeder Slot (lokaler Zähler + Lock) belegt eine eigene Cache-Line -> kein False Sharing
+
 typedef struct {
     int value;
     pthread_mutex_t lock;
@@ -16,7 +19,7 @@ typedef struct counter_t {
     int global;
     pthread_mutex_t g_lock;
     int treshold;
-    slot_t slot[NUMCPUS];   // beginnt automatisch auf einer neuen Cache-Line
+    slot_t slot[NUMCPUS];   // starts on new cache line
 } __attribute__((aligned(CACHE_LINE))) counter_t;
 
 typedef struct arg_t {
@@ -81,34 +84,17 @@ static double now_us(void) {
     return ts.tv_sec * 1e6 + ts.tv_nsec / 1e3;
 }
 
-int main(int argc, char *argv[])
-{
-    if (argc != 3) {
-        printf("Usage: %s <number_of_threads> <counter_target>\n", argv[0]);
-        return 1;
-    }
 
-    long num_threads = atoi(argv[1]);
-    const int target = atoi(argv[2]);
-
-    if (num_threads < 1 || num_threads > NUMCPUS) {
-        printf("Can only use 1 to %d Threads. Exiting...\n", NUMCPUS);
-        return 1;
-    }
-
-    printf("number of threads: %ld\n", num_threads);
+double run_trial(int num_threads, int treshold, int target) {
+    arg_t args[MAX_THREADS];
     pthread_t threads[num_threads];
 
-    const int t_target = target / num_threads;
-    const int remainder = target % num_threads;   // geht an den letzten Thread
-
-    printf("counter target: %d\n", target);
-    printf("single thread target: %d\n", t_target);
-
     counter_t c;
-    init_counter(&c, 10000);
 
-    arg_t args[NUMCPUS];
+    int t_target = target / num_threads;
+    int remainder = target % num_threads;
+
+    init_counter(&c, treshold);
 
     double time_pre = now_us();
 
@@ -127,11 +113,103 @@ int main(int argc, char *argv[])
     }
 
     double time_post = now_us();
-    double diff = time_post - time_pre;
+    double elapsed = time_post - time_pre;
 
-    printf("shared counter (approx, global): %d\n", get(&c));
-    printf("shared counter (exact):          %d\n", get_exact(&c));
-    printf("Timedelta is %lf us\n", diff);
+    int exact = get_exact(&c);
+
+    if (exact != target) {
+        printf("ERROR: expected %d, got %d\n", target, exact);
+    }
+
+    // Cleanup
+    for (int i = 0; i < NUMCPUS; i++) {
+        pthread_mutex_destroy(&c.slot[i].lock);
+    }
+
+    pthread_mutex_destroy(&c.g_lock);
+
+    return elapsed;
+}
+
+
+
+
+/* ---------------------------------------------------------
+   Median
+   --------------------------------------------------------- */
+
+int compare_double(const void *a, const void *b) {
+    double x = *(const double *)a;
+    double y = *(const double *)b;
+
+    return (x > y) - (x < y);
+}
+
+
+double median(double values[], int count) {
+
+    qsort(values, count, sizeof(double), compare_double);
+
+    if (count % 2 == 0) {
+        return (values[count / 2 - 1] + values[count / 2]) / 2.0;
+    }
+
+    return values[count / 2];
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc != 2) {
+        printf("Usage: %s <number_of_threads> <counter_target>\n", argv[0]);
+        return 1;
+    }
+
+    const int target = atoi(argv[1]);
+
+    FILE *file = fopen("apr_lock_benchmark.csv", "w");
+
+    
+    if (file == NULL) {
+        perror("fopen");
+        return EXIT_FAILURE;
+    }
+
+    int thread_counts[] = {1, 2, 4, 8, 12};
+    int thresholds[] = {100, 1000, 10000};
+
+    // Only summary values (medians) are written to CSV
+    fprintf(file, "threads,treshold,median_time_us,target\n");
+
+    for (int i = 0; i < 5; i++) {
+        int threads = thread_counts[i];
+
+        for (int j = 0; j < 3; j++) {
+            int threshold = thresholds[j];
+
+
+            double times[RUNS];
+
+            // warmups due to caching 
+            for (int i = 0; i < WARMUP_RUNS; i++) {
+                run_trial(threads, threshold, target);
+            }
+
+            // measured trials
+            for (int i = 0; i < RUNS; i++) {
+                times[i] = run_trial(threads, threshold, target);
+            }
+
+            double med = median(times, RUNS);
+
+            printf("%d,%d,%f,%d\n", threads, threshold, med, target);
+            fprintf(file, "%d,%d,%f,%d\n", threads, threshold, med, target);
+        }
+    }
+
+    fclose(file);
+
+    printf("\nMedian results written to lookup_benchmark.csv\n");
+
 
     return 0;
 }

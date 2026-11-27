@@ -11,8 +11,6 @@
 
 /*
 TODOS:
-printtree or like tree stats func into
-
 benchmark
 
 */
@@ -41,6 +39,15 @@ typedef struct tree_lock {
     pthread_mutex_t root_lock;
 } tree_lock_t;
 
+void shuffle(int *values, int count) {
+    for (int i = count - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+
+        int temp = values[i];
+        values[i] = values[j];
+        values[j] = temp;
+    }
+}
 
 Node* createNode(int value) {
     Node *temp = malloc(sizeof(*temp));
@@ -173,8 +180,6 @@ void insertLocal(void *arg, int value) {
 
 }
 
-
-// TODO: free tree
 void freeTree(Node *node) {
     if (node == NULL)
         return;
@@ -185,9 +190,49 @@ void freeTree(Node *node) {
     free(node);
 }
 
-void destroyTree(tree_t* tree) {
+void destroyTree(tree_t *tree) {
     freeTree(tree->root);
+
+    tree->root = NULL;
     pthread_mutex_destroy(&tree->lock);
+}
+
+void freeTreeLock(NodeLock *node) {
+    if (node == NULL)
+        return;
+
+    freeTreeLock(node->left);
+    freeTreeLock(node->right);
+
+    pthread_mutex_destroy(&node->lock);
+    free(node);
+}
+
+void destroyTreeLock(tree_lock_t *tree) {
+    freeTreeLock(tree->root);
+
+    tree->root = NULL;
+    pthread_mutex_destroy(&tree->root_lock);
+}
+
+void printGlobal(Node* root) {
+    if(root != NULL)
+    {
+        printf("node val: %d\n", root->key);
+        printGlobal(root->left);
+        printGlobal(root->right);
+
+    }
+}
+
+void printLocal(NodeLock* root) {
+    if(root != NULL)
+    { 
+        printf("node val: %d\n", root->key);
+        printLocal(root->left);
+        printLocal(root->right);
+
+    }
 }
 
 /* ---------------------------------------------------------
@@ -217,19 +262,18 @@ typedef void (*insert_fn)(void *, int);
 
 typedef struct __args_t {
     void *tree;
-    int t_target;
+    int *values;
+    int inserts;
     int num_threads;
     int threadID;
     insert_fn insertFunc;
 } args_t;
 
+void *worker(void *arg) {
+    args_t *args = (args_t *)arg;
 
-void* worker(void* arg) {
-    args_t *args = (args_t *)arg; 
-
-    for(int i = 0; i<args->t_target; i++) {
-        int val = i * args->num_threads + args->threadID;
-        args->insertFunc(args->tree, val);
+    for (int i = args->threadID; i < args->inserts; i += args->num_threads) {
+        args->insertFunc(args->tree, args->values[i]);
     }
 
     return NULL;
@@ -241,34 +285,65 @@ static double now_us(void) {
     return ts.tv_sec * 1e6 + ts.tv_nsec / 1e3;
 }
 
-double run_trial(void *tree, int num_threads, insert_fn insert_func, int inserts) {
+double run_trial(void *tree, int num_threads, insert_fn insert_func,
+                 int *values, int inserts) {
+
     pthread_t threads[MAX_THREADS];
     args_t args[MAX_THREADS];
 
-    int t_target = inserts / num_threads;
-    int remainder = inserts % num_threads;
-
     double time_pre = now_us();
 
-    for(int i = 0; i < num_threads; i++) {
+    for (int i = 0; i < num_threads; i++) {
         args[i] = (args_t) {
             .tree = tree,
-            .t_target = t_target + (i == num_threads-1 ? remainder : 0 ), 
+            .values = values,
+            .inserts = inserts,
             .num_threads = num_threads,
             .threadID = i,
-            .insertFunc = insert_func,
+            .insertFunc = insert_func
         };
 
         pthread_create(&threads[i], NULL, worker, &args[i]);
     }
 
-    for(int i = 0; i < num_threads; i++) {
+    for (int i = 0; i < num_threads; i++) {
         pthread_join(threads[i], NULL);
     }
 
     double time_post = now_us();
 
-    return time_post-time_pre;
+    return time_post - time_pre;
+}
+
+double runGlobalFresh(int num_threads, int *values, int inserts) {
+    tree_t tree;
+
+    if (initTree(&tree) != 0) {
+        fprintf(stderr, "Could not initialize global tree\n");
+        exit(EXIT_FAILURE);
+    }
+
+    double elapsed = run_trial(&tree, num_threads, insertGlobal, values, inserts);
+
+    destroyTree(&tree);
+
+    return elapsed;
+}
+
+
+double runLocalFresh(int num_threads, int *values, int inserts) {
+    tree_lock_t tree;
+
+    if (initGLockTree(&tree) != 0) {
+        fprintf(stderr, "Could not initialize local tree\n");
+        exit(EXIT_FAILURE);
+    }
+
+    double elapsed = run_trial(&tree, num_threads, insertLocal, values, inserts);
+
+    destroyTreeLock(&tree);
+
+    return elapsed;
 }
 
 int main(int argc, char *argv[])
@@ -286,15 +361,101 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if(initGLockTree(&tree_lock) != 0) {
+        fprintf(stderr, "Error initializing tree\n");
+        return 1;
+    }
+
+
     int thread_counts[] = {1, 2, 4, 8, 12};
-    const int num_insertions = atoi(argv[1]);
+    const int inserts = atoi(argv[1]);
+
+    if (inserts <= 0) {
+        fprintf(stderr, "Number of inserts must be positive\n");
+        return EXIT_FAILURE;
+    }
+
+    int *values = malloc((size_t)inserts * sizeof(*values));
+
+    if (values == NULL) {
+        perror("malloc");
+        return EXIT_FAILURE;
+    }
+
+    for (int i = 0; i < inserts; i++) {
+        values[i] = i;
+    }
+
+    srand(42);
+    shuffle(values, inserts);
     char *names[] = {
         "global",
         "local"
     };
 
+    FILE *file = fopen("btree_benchmark.csv", "w");
 
-    destroyTree(&tree);
+    if (file == NULL) {
+        perror("fopen");
+        return EXIT_FAILURE;
+    }
 
+    fprintf(file, "lock_type,threads,median_time_us,target\n");
+
+    for (int t = 0; t < 5; t++) {
+
+        int num_threads = thread_counts[t];
+
+        double global_samples[RUNS];
+        double local_samples[RUNS];
+
+        printf("\nThreads: %d\n", num_threads);
+
+        // Warm-up runs
+        for (int w = 0; w < WARMUP_RUNS; w++) {
+            runGlobalFresh(num_threads, values, inserts);
+            runLocalFresh(num_threads, values, inserts);
+        }
+        // Benchmark runs
+        for (int r = 0; r < RUNS; r++) {
+            if (r % 2 == 0) {
+
+                global_samples[r] = runGlobalFresh(num_threads, values, inserts);
+                local_samples[r] = runLocalFresh(num_threads, values, inserts);
+
+            } else {
+
+                local_samples[r] = runLocalFresh(num_threads, values, inserts);
+                global_samples[r] = runGlobalFresh(num_threads, values, inserts);
+
+            }
+        }
+
+        // Calculate medians
+        double global_median = median(global_samples, RUNS);
+        double local_median = median(local_samples, RUNS);
+
+        // Print summary
+        printf("Global locking: %.2f us\n", global_median);
+        printf("Local node lock: %.2f us\n", local_median);
+
+        // Write summary to CSV
+        fprintf(file, "%s,%d,%.2f,%d\n",
+                names[0], num_threads, global_median, inserts);
+
+        fprintf(file, "%s,%d,%.2f,%d\n",
+                names[1], num_threads, local_median, inserts);
+
+        fflush(file);
+    }
+
+    fclose(file);
+
+
+    printGlobal(tree.root);
+
+    printLocal(tree_lock.root);
+
+    
     return 0;
 }
